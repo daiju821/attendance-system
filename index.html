@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Professor Portal</title>
+</head>
+
+<body>
+
+<h1>Professor Attendance Portal</h1>
+
+<h2>Enter Class Code</h2>
+
+<input type="text" id="classCode" placeholder="Example: CS101">
+
+<h2>Select Day</h2>
+
+<select id="day">
+<option value="Monday">Monday</option>
+<option value="Tuesday">Tuesday</option>
+<option value="Wednesday">Wednesday</option>
+<option value="Thursday">Thursday</option>
+<option value="Friday">Friday</option>
+</select>
+
+<button onclick="loadSchedule()">Load Schedule</button>
+
+<h3 id="scheduleDisplay"></h3>
+
+<h2>Update Class Status</h2>
+
+<select id="status">
+<option value="on-time">Class On Time</option>
+<option value="late">Professor Late</option>
+<option value="cancelled">Class Cancelled</option>
+</select>
+
+<button onclick="updateClass()">Update</button>
+
+<script>
+
+const schedules = {
+
+CS101:{
+Monday:"8:00 AM",
+Wednesday:"8:00 AM"
+},
+
+CS102:{
+Tuesday:"10:00 AM",
+Thursday:"10:00 AM"
+},
+
+CS201:{
+Friday:"1:00 PM"
+}
+
+};
+
+function loadSchedule(){
+
+const code = document.getElementById("classCode").value;
+const day = document.getElementById("day").value;
+
+if(schedules[code] && schedules[code][day]){
+
+const schedule = schedules[code][day];
+
+document.getElementById("scheduleDisplay").innerText =
+"Schedule: " + schedule;
+
+}else{
+
+document.getElementById("scheduleDisplay").innerText =
+"No class scheduled";
+
+}
+
+}
+
+function updateClass(){
+
+const code = document.getElementById("classCode").value;
+const day = document.getElementById("day").value;
+const status = document.getElementById("status").value;
+
+const schedule = schedules[code] ? schedules[code][day] : null;
+
+fetch("http://localhost:3000/attendance",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+classCode:code,
+day:day,
+schedule:schedule,
+status:status
+
+})
+
+})
+
+.then(res=>res.text())
+.then(data=>alert(data));
+
+}
+
+</script>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDSS5WUym6RZwZuK6L-VDhwGqAoxhqF5OU",
+    authDomain: "attendance-system-ee197.firebaseapp.com",
+    projectId: "attendance-system-ee197",
+    storageBucket: "attendance-system-ee197.firebasestorage.app",
+    messagingSenderId: "378054948403",
+    appId: "1:378054948403:web:86669fc58c190bfac1d546"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
+</body>
+
+</html>
