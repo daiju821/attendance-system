@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Attendance Viewer</title>
+</head>
+<body>
+
+<h2>📊 Attendance Viewer</h2>
+
+<p><b>Class Code:</b> ECE3A24</p>
+<p><b>Subject Code:</b> ECE 324</p>
+<p><b>Descriptive Title:</b> Feedback And Control Systems</p>
+
+<br>
+
+<label>Select Date:</label>
+<input type="date" id="dateFilter">
+
+<br><br>
+
+<button onclick="loadAttendance()">Load Attendance</button>
+
+<br><br>
+
+<table border="1" width="100%">
+<thead>
+<tr>
+  <th>Name</th>
+  <th>UID</th>
+  <th>Time</th>
+  <th>Date</th>
+  <th>Status</th>
+</tr>
+</thead>
+
+<tbody id="tableBody">
+</tbody>
+</table>
+
+<script>
+
+// 🔥 normalize date (2026-4-18 → 2026-04-18)
+function normalizeDate(d) {
+  if (!d) return "";
+  const parts = d.split("-");
+  if (parts.length !== 3) return d;
+
+  return parts[0] + "-" +
+         parts[1].padStart(2, "0") + "-" +
+         parts[2].padStart(2, "0");
+}
+
+// 🔥 LOAD ATTENDANCE
+async function loadAttendance() {
+
+  const dateInput = document.getElementById("dateFilter").value;
+
+  const res = await fetch(
+    "https://firestore.googleapis.com/v1/projects/attendance-system-ee197/databases/(default)/documents/attendance"
+  );
+
+  const data = await res.json();
+
+  console.log("DATA:", data); // 🔥 DEBUG
+
+  const table = document.getElementById("tableBody");
+  table.innerHTML = "";
+
+  if (!data.documents || data.documents.length === 0) {
+    table.innerHTML = "<tr><td colspan='5'>No attendance found</td></tr>";
+    return;
+  }
+
+  data.documents.forEach(doc => {
+
+    const f = doc.fields;
+
+    if (!f) return;
+
+    const uid = f.uid?.stringValue || "";
+    const time = f.time?.stringValue || "";
+    const rawDate = f.date?.stringValue || "";
+    const status = f.status?.stringValue || "";
+
+    const date = normalizeDate(rawDate);
+
+    // 🔥 DATE FILTER ONLY
+    if (dateInput && date !== dateInput) return;
+
+    // 🔥 NAME MAPPING
+    let name = "Unknown";
+
+    if (uid === "27728f25") name = "Janry Caspillan";
+    if (uid === "01965397") name = "Daryl Kien Rivera";
+
+    table.innerHTML += `
+      <tr>
+        <td>${name}</td>
+        <td>${uid}</td>
+        <td>${time}</td>
+        <td>${date}</td>
+        <td>${status}</td>
+      </tr>
+    `;
+  });
+}
+
+</script>
+
+</body>
+</html>

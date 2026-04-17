@@ -1,25 +1,16 @@
 const express = require("express");
-const cors = require("cors");
+const path = require("path");
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+/* serve html files */
+app.use(express.static(__dirname));
 
-app.get("/", (req, res) => {
-    res.send("Attendance server running");
+/* open index.html */
+app.get("/", (req,res)=>{
+  res.sendFile(path.join(__dirname,"index.html"));
 });
 
-app.post("/attendance", (req, res) => {
-
-    const student = req.body;
-
-    console.log("Attendance received:", student);
-
-    res.send("Attendance saved");
-
-});
-
-app.listen(3000, () => {
-    console.log("Server running on port 3000");
+app.listen(3000,()=>{
+  console.log("Server running on http://localhost:3000");
 });

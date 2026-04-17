@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Attendance Records</title>
+</head>
+
+<body>
+
+<h1>Attendance Records</h1>
+
+<table border="1" id="attendanceTable">
+
+<tr>
+<th>Class Code</th>
+<th>Day</th>
+<th>Schedule</th>
+<th>Status</th>
+<th>Timestamp</th>
+</tr>
+
+</table>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDSS5WUym6RZwZuK6L-VDhwGqAoxhqF5OU",
+  authDomain: "attendance-system-ee197.firebaseapp.com",
+  projectId: "attendance-system-ee197",
+  storageBucket: "attendance-system-ee197.firebasestorage.app",
+  messagingSenderId: "378054948403",
+  appId: "1:378054948403:web:86669fc58c190bfac1d546"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+async function loadAttendance(){
+
+const querySnapshot = await getDocs(collection(db,"attendance"));
+
+const table = document.getElementById("attendanceTable");
+
+querySnapshot.forEach((doc)=>{
+
+const data = doc.data();
+
+const row = table.insertRow();
+
+row.insertCell(0).innerText = data.classCode;
+row.insertCell(1).innerText = data.day;
+row.insertCell(2).innerText = data.schedule;
+row.insertCell(3).innerText = data.status;
+
+if(data.timestamp){
+row.insertCell(4).innerText = data.timestamp.toDate();
+}else{
+row.insertCell(4).innerText = "";
+}
+
+});
+
+}
+
+loadAttendance();
+
+</script>
+
+</body>
+
+</html>
