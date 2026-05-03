@@ -1,107 +1,253 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Attendance Viewer</title>
+  <title>Attendance Dashboard</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI';
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      margin: 0;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: white;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 900px;
+      margin: 20px auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th {
+      background: #667eea;
+      color: white;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .present { background: green; color:white; }
+    .late { background: orange; color:white; }
+    .absent { background: red; color:white; }
+  </style>
 </head>
+
 <body>
 
-<h2>📊 Attendance Viewer</h2>
+<h2>📊 Attendance Dashboard</h2>
 
-<p><b>Class Code:</b> ECE3A24</p>
-<p><b>Subject Code:</b> ECE 324</p>
-<p><b>Descriptive Title:</b> Feedback And Control Systems</p>
+<!-- ================= VIEWER ================= -->
+<div class="card">
 
-<br>
+  <h3>Attendance Viewer</h3>
 
-<label>Select Date:</label>
-<input type="date" id="dateFilter">
+  <input type="date" id="datePicker">
+  <select id="subjectSelect">
+    <option>Subject1</option>
+    <option>Subject2</option>
+  </select>
 
-<br><br>
+  <button onclick="loadAttendance()">Load Attendance</button>
 
-<button onclick="loadAttendance()">Load Attendance</button>
+  <p><b>Day:</b> <span id="dayDisplay"></span></p>
 
-<br><br>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Time-In</th>
+        <th>Time-Out</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="attendanceTable"></tbody>
+  </table>
 
-<table border="1" width="100%">
-<thead>
-<tr>
-  <th>Name</th>
-  <th>UID</th>
-  <th>Time</th>
-  <th>Date</th>
-  <th>Status</th>
-</tr>
-</thead>
+</div>
 
-<tbody id="tableBody">
-</tbody>
-</table>
+<!-- ================= SUMMARY ================= -->
+<div class="card">
+
+  <h3>Attendance Monthly Summary</h3>
+
+  <select id="summarySubject">
+    <option>All Subjects</option>
+    <option>Subject1</option>
+    <option>Subject2</option>
+  </select>
+
+  <select id="studentFilter">
+    <option>All Students</option>
+    <option>Student1</option>
+    <option>Student2</option>
+  </select>
+
+  <select id="monthFilter">
+    <option value="1">January</option>
+    <option value="2">February</option>
+    <option value="3">March</option>
+    <option value="4" selected>April</option>
+    <option value="5">May</option>
+  </select>
+
+  <button onclick="loadSummary()">Load Summary</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Date</th>
+        <th>Subject</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="summaryTable"></tbody>
+  </table>
+
+</div>
 
 <script>
 
-// 🔥 normalize date (2026-4-18 → 2026-04-18)
-function normalizeDate(d) {
-  if (!d) return "";
-  const parts = d.split("-");
-  if (parts.length !== 3) return d;
+// 🔥 FIREBASE CONFIG 
+const firebaseConfig = {
+  apiKey: "AIzaSyDSS5WUym6RZwZuK6L-VDhwGqAoxhqF5OU",
+  authDomain: "attendance-system-ee197.firebaseapp.com",
+  projectId: "attendance-system-ee197",
+  storageBucket: "attendance-system-ee197.firebasestorage.app",
+  messagingSenderId: "378054948403",
+  appId: "1:378054948403:web:787e35be89cbe58dc1d546"
+};
 
-  return parts[0] + "-" +
-         parts[1].padStart(2, "0") + "-" +
-         parts[2].padStart(2, "0");
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let data = [];
+
+// FORMAT DATE (MATCH ESP32)
+function formatDate(input) {
+  const d = new Date(input);
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
 }
 
-// 🔥 LOAD ATTENDANCE
+// GET DAY
+function getDay(input) {
+  return new Date(input).toLocaleString('en-US', { weekday: 'long' });
+}
+
+// DATE CHANGE
+datePicker.addEventListener("change", () => {
+  dayDisplay.innerText = getDay(datePicker.value);
+});
+
+// FETCH FIREBASE
+async function fetchFirebase() {
+  data = [];
+
+  const snapshot = await db.collection("attendance").get();
+
+  snapshot.forEach(doc => {
+    const d = doc.data();
+
+    data.push({
+      name: d.name || "-",
+      subject: d.subject || "-",
+      date: d.date || "-",
+      timeIn: d.timeIn || "-",
+      timeOut: d.timeOut || "-",
+      status: d.status || "-"
+    });
+  });
+}
+
+// ================= VIEWER =================
 async function loadAttendance() {
 
-  const dateInput = document.getElementById("dateFilter").value;
+  await fetchFirebase();
 
-  const res = await fetch(
-    "https://firestore.googleapis.com/v1/projects/attendance-system-ee197/databases/(default)/documents/attendance"
-  );
+  const subject = subjectSelect.value;
+  const date = formatDate(datePicker.value);
 
-  const data = await res.json();
+  attendanceTable.innerHTML = "";
 
-  console.log("DATA:", data); // 🔥 DEBUG
+  data.forEach(d => {
 
-  const table = document.getElementById("tableBody");
-  table.innerHTML = "";
+    if (d.subject === subject && d.date === date) {
 
-  if (!data.documents || data.documents.length === 0) {
-    table.innerHTML = "<tr><td colspan='5'>No attendance found</td></tr>";
-    return;
-  }
+      let cls = d.status === "Absent" ? "absent" :
+                d.status === "Present but Late" ? "late" : "present";
 
-  data.documents.forEach(doc => {
+      attendanceTable.innerHTML += `
+        <tr>
+          <td>${d.name}</td>
+          <td>${d.timeIn}</td>
+          <td>${d.timeOut}</td>
+          <td class="${cls}">${d.status}</td>
+        </tr>
+      `;
+    }
+  });
+}
 
-    const f = doc.fields;
+// ================= SUMMARY =================
+async function loadSummary() {
 
-    if (!f) return;
+  await fetchFirebase();
 
-    const uid = f.uid?.stringValue || "";
-    const time = f.time?.stringValue || "";
-    const rawDate = f.date?.stringValue || "";
-    const status = f.status?.stringValue || "";
+  const subject = document.getElementById("summarySubject").value;
+  const student = document.getElementById("studentFilter").value;
+  const month = document.getElementById("monthFilter").value;
 
-    const date = normalizeDate(rawDate);
+  summaryTable.innerHTML = "";
 
-    // 🔥 DATE FILTER ONLY
-    if (dateInput && date !== dateInput) return;
+  data.forEach(d => {
 
-    // 🔥 NAME MAPPING
-    let name = "Unknown";
+    let dateObj = new Date(d.date);
+    let matchMonth = (dateObj.getMonth()+1) == month;
 
-    if (uid === "27728f25") name = "Janry Caspillan";
-    if (uid === "01965397") name = "Daryl Kien Rivera";
+    let matchSubject = (subject === "All Subjects" || d.subject === subject);
+    let matchStudent = (student === "All Students" || d.name === student);
 
-    table.innerHTML += `
-      <tr>
-        <td>${name}</td>
-        <td>${uid}</td>
-        <td>${time}</td>
-        <td>${date}</td>
-        <td>${status}</td>
-      </tr>
-    `;
+    if (matchMonth && matchSubject && matchStudent) {
+
+      summaryTable.innerHTML += `
+        <tr>
+          <td>${d.name}</td>
+          <td>${d.date}</td>
+          <td>${d.subject}</td>
+          <td>${d.status}</td>
+        </tr>
+      `;
+    }
   });
 }
 
