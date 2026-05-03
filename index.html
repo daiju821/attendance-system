@@ -199,22 +199,58 @@ async function loadAttendance() {
 
   attendanceTable.innerHTML = "";
 
+  let merged = {};
+
   data.forEach(d => {
 
     if (d.subject === subject && d.date === date) {
 
-      let cls = d.status === "Absent" ? "absent" :
-                d.status === "Present but Late" ? "late" : "present";
+      let key = d.name; // group by student
 
-      attendanceTable.innerHTML += `
-        <tr>
-          <td>${d.name}</td>
-          <td>${d.timeIn}</td>
-          <td>${d.timeOut}</td>
-          <td class="${cls}">${d.status}</td>
-        </tr>
-      `;
+      if (!merged[key]) {
+        merged[key] = {
+          name: d.name,
+          timeIn: "-",
+          timeOut: "-",
+          status: "-"
+        };
+      }
+
+      // merge values
+      if (d.timeIn && d.timeIn !== "-") {
+        merged[key].timeIn = d.timeIn;
+        merged[key].status = d.status;
+      }
+
+      if (d.timeOut && d.timeOut !== "-") {
+        merged[key].timeOut = d.timeOut;
+
+        // if no timeIn → Absent
+        if (merged[key].timeIn === "-") {
+          merged[key].status = "Absent";
+        }
+      }
+
+      if (d.status === "Absent") {
+        merged[key].status = "Absent";
+      }
     }
+  });
+
+  // display merged data
+  Object.values(merged).forEach(d => {
+
+    let cls = d.status === "Absent" ? "absent" :
+              d.status === "Present but Late" ? "late" : "present";
+
+    attendanceTable.innerHTML += `
+      <tr>
+        <td>${d.name}</td>
+        <td>${d.timeIn}</td>
+        <td>${d.timeOut}</td>
+        <td class="${cls}">${d.status}</td>
+      </tr>
+    `;
   });
 }
 
